@@ -1,0 +1,278 @@
+﻿@page "/create-order"
+@layout EmptyLayout
+
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Model
+@using MyVegieStore.Services
+@inject MyVegieStoreContext _context // הזרקת ההקשר כאן
+@inject OrderViewModel OrderViewModel
+@inject NavigationManager NavigationManager
+@inject UserIdService UserIdService
+
+<h3>הזמנת מוצרים</h3>
+
+<div style="display: flex;">
+    <div style="width: 50%; border: 2px solid #4CAF50; padding: 10px; margin-right: 10px;">
+        <!-- כפתור סיים הזמנה בחלק העליון של רשימת המוצרים -->
+        @if (!showConfirmation)
+        {
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="complete-order-button" @onclick="CompleteOrder">סיים הזמנה</button>
+            </div>
+        }
+
+        <!-- הוספת מסגרת ירוקה -->
+        <h4>מוצרים זמינים</h4>
+        <input @bind="searchTerm" @oninput="OnSearchChanged" placeholder="חפש מוצר..." style="margin-bottom: 10px; padding: 5px; width: 100%;" />
+        <ul>
+            @foreach (var product in filteredProducts)
+            {
+                <li>
+                    <strong>@product.ProductName</strong><br />
+                    מחיר ליחידה: @product.PricePerUnit ₪
+                    <div>
+                        <label>כמות: </label>
+                        
+                        <button class="custom-button" @onclick="() => AddProduct(product)">הוסף</button>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div style="width: 50%; border: 2px solid #4CAF50; padding: 10px;">
+        <!-- הוספת מסגרת ירוקה -->
+        <h4>פרטי ההזמנה שלך</h4>
+        <ul>
+            @foreach (var item in orderDetailsList)
+            {
+                <li>
+                    מוצר: @item.Product.ProductName<br />
+                    כמות: @item.Quantity<br />
+                    מחיר כולל: @item.TotalPrice ₪
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+<!-- סך הכל מוצג בצורה קבועה בצד ימין למעלה עם רקע ירוק -->
+<div style="position: fixed; right: 20px; top: 20px; background-color: #4CAF50; color: white; padding: 10px; border-radius: 4px;">
+    <h4>סך הכל: @TotalOrderAmount.ToString("F2") ₪</h4>
+</div>
+
+@if (showConfirmation)
+{
+    <div class="confirmation-dialog">
+        <p>האם אתה בטוח שברצונך לסיים את ההזמנה?</p>
+        <button @onclick="ConfirmOrder">אישור</button>
+        <button @onclick="CancelOrder">ביטול</button>
+    </div>
+}
+
+<style>
+    .custom-button {
+        background-color: #4CAF50; /* ירוק */
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+        .custom-button:hover {
+            background-color: #45a049; /* ירוק כהה יותר בעת ריחוף */
+        }
+
+    .complete-order-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
+        .complete-order-button:hover {
+            background-color: #45a049;
+        }
+
+    .confirmation-dialog {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+    }
+
+        .confirmation-dialog p {
+            margin-bottom: 20px;
+        }
+
+        .confirmation-dialog button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+            .confirmation-dialog button:last-child {
+                background-color: #f44336; /* Red color for the cancel button */
+            }
+</style>
+
+@code {
+    private List<Product> products = new List<Product>();
+    private List<Product> filteredProducts = new List<Product>();
+    private string searchTerm = string.Empty;
+    private double selectedQuantity = 1.0; // כמות ברירת מחדל
+    private List<OrderDetails> orderDetailsList = new List<OrderDetails>();
+    private double TotalOrderAmount = 0.0; // סך הכל של ההזמנה
+    private bool showConfirmation = false;
+
+    protected override void OnInitialized()
+    {
+        // בדיקת null ל-context
+        if (_context == null)
+        {
+            throw new InvalidOperationException("Database context is not available.");
+        }
+
+        // טעינת מוצרים מהדאטהבייס
+        products = _context.Products
+            .Select(p => new Product
+                {
+                    ProductID = p.ProductID,
+                    ProductName = p.ProductName ?? "Unknown Product", // טיפול ב-NULL עבור ProductName
+                    PricePerUnit = p.PricePerUnit,                   // בהנחה ש-PricePerUnit לא יכול להיות NULL
+                    StockQuantity = p.StockQuantity,                 // בהנחה ש-StockQuantity לא יכול להיות NULL
+                    PricingType = p.PricingType ?? "Default Type",   // טיפול ב-NULL עבור PricingType
+                    Image = p.Image // שימוש בנתיב התמונה או ברירת מחדל כפי שהוגדר במחלקת Product
+                })
+            .ToList();
+
+        if (products == null || !products.Any())
+        {
+            throw new InvalidOperationException("No products were loaded from the database.");
+        }
+
+        filteredProducts = products; // הצגת כל המוצרים בהתחלה
+    }
+
+    private void AddProduct(Product product)
+    {
+        if (product == null)
+            throw new ArgumentNullException(nameof(product));
+
+        var orderDetail = new OrderDetails
+            {
+                ProductID = product.ProductID,
+                Product = product, // קישור המוצר לפרטי ההזמנה
+                Quantity = selectedQuantity,
+                UnitPrice = product.PricePerUnit,
+
+                TotalPrice = Math.Round(selectedQuantity * product.PricePerUnit, 2), // עיגול ל-2 מספרים אחרי הנקודה
+
+            };
+
+        orderDetailsList.Insert(0, orderDetail); // הוספה לראש הרשימה
+
+        // עדכון סך הכל
+        TotalOrderAmount += orderDetail.TotalPrice;
+
+        // איפוס הכמות
+        selectedQuantity = 1.0;
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrEmpty(searchTerm))
+        {
+            filteredProducts = products; // הצגת כל המוצרים אם החיפוש ריק
+        }
+        else
+        {
+            filteredProducts = products
+                .Where(p => p.ProductName != null && p.ProductName.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        StateHasChanged(); // עדכון ממשק המשתמש
+    }
+
+    private void CompleteOrder()
+    {
+        showConfirmation = true;
+    }
+
+    private void ConfirmOrder()
+    {
+        // יצירת אובייקט חדש של CustomerOrder
+        var newOrder = new CustomerOrder
+            {
+                CustomerID = UserIdService.UserId ?? 0, // שימוש ב-Null Coalescing Operator כדי למנוע המרה שגויה
+                OrderDate = DateTime.Now,
+                TotalAmount = Math.Round(TotalOrderAmount, 2),
+                DeliveryStatus = "Pending", // סטטוס התחלה, ניתן לשנות בהתאם לצורך
+            };
+
+        // הוספת ההזמנה לבסיס הנתונים
+        _context.Orders.Add(newOrder);
+
+        // שמירת השינויים בבסיס הנתונים כדי לקבל את OrderID של ההזמנה החדשה
+        _context.SaveChanges();
+
+        // הוספת כל שורת פירוט ההזמנה לטבלת OrderDetails
+        foreach (var item in orderDetailsList)
+        {
+            var orderDetail = new OrderDetails
+                {
+                    OrderID = newOrder.OrderID ?? 0, // השתמש במפעיל ?? כדי להבטיח שלא יישמר null
+                    ProductID = item.ProductID,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.TotalPrice,
+                };
+
+            _context.OrderDetails.Add(orderDetail);
+        }
+
+
+        // שמירת כל שורות פירוט ההזמנה בבסיס הנתונים
+        _context.SaveChanges();
+
+        // איפוס פרטי ההזמנה לאחר שמירה
+        orderDetailsList.Clear();
+        TotalOrderAmount = 0.0;
+
+        // הסתרת דיאלוג האישור
+        showConfirmation = false;
+
+        // נווט לדף ההזמנות או כל דף מתאים אחר
+        NavigationManager.NavigateTo("/customer-orders");
+    }
+
+
+    private void CancelOrder()
+    {
+        showConfirmation = false;
+    }
+}

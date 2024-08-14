@@ -1,0 +1,160 @@
+﻿@page "/login"
+@layout EmptyLayout
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Services
+@inject MyVegieStoreContext DbContext
+@inject NavigationManager NavigationManager
+@inject UserIdService UserIdService
+@using Microsoft.EntityFrameworkCore
+
+<div class="login-container">
+    <div class="login-form">
+        <h2>Sign in</h2>
+        <EditForm Model="loginModel" OnValidSubmit="HandleLoginAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div>
+                <label for="username">Username:</label>
+                <InputText id="username" @bind-Value="loginModel.Username" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+
+            <div>
+                <label for="password">Password:</label>
+                <InputText id="password" @bind-Value="loginModel.Password" type="password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+            <button type="submit">Sign in</button>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(loginMessage))
+        {
+            <div class="alert alert-info">@loginMessage</div>
+        }
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new LoginModel();
+    private string loginMessage;
+
+    private async Task HandleLoginAsync()
+    {
+        try
+        {
+            var user = await DbContext.Person
+                .Where(p => p.Email == loginModel.Username && p.Password == loginModel.Password)
+                .FirstOrDefaultAsync();
+
+            if (user != null)
+            {
+                UserIdService.UserId = user.PersonID;
+                UserIdService.FullName = user.Name;
+                UserIdService.UserType = user.UserType;
+
+                loginMessage = "Login successful!";
+                await Task.Delay(1000);
+
+                if (UserIdService.UserType == "Customer")
+                {
+                    NavigationManager.NavigateTo("/customer-page");
+                }
+                else if (UserIdService.UserType == "Admin")
+                {
+                    NavigationManager.NavigateTo("/admin-page");
+                }
+            }
+            else
+            {
+                loginMessage = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            loginMessage = $"Login failed: {ex.Message}";
+        }
+    }
+
+    private class LoginModel
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: url('Images/large-set-isolated-vegetables-white-background.jpg') no-repeat center center;
+        background-size: cover;
+        position: relative;
+    }
+
+    .login-form {
+        background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent background */
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        transform: rotateX(0deg) rotateY(0deg); /* Start with no rotation */
+        transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition */
+    }
+
+        .login-form h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333333;
+        }
+
+        .login-form label {
+            display: block;
+            text-align: left;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555555;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #00796b;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .login-form button:hover {
+                background-color: #004d40;
+            }
+
+    .alert.alert-info {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #e0f7fa;
+        color: #00695c;
+        border-radius: 5px;
+    }
+</style>

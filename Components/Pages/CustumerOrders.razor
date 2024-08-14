@@ -1,0 +1,96 @@
+﻿@page "/customer-orders"
+@layout EmptyLayout
+
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Model
+@inject OrderViewModel OrderViewModel
+@using MyVegieStore.Services
+@inject UserIdService UserIdService
+@inject NavigationManager NavigationManager
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+
+<h3>ההזמנות של @UserIdService.FullName </h3>
+
+@if (orders == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (orders.Count == 0)
+{
+    <p>No orders found for this customer.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Order Date</th>
+                <th>Total Amount</th>
+                <th>Delivery Status</th>
+                <th>Actions</th> <!-- New column for actions -->
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in orders)
+            {
+                <tr>
+                    <td>@order.OrderID</td>
+                    <td>@order.OrderDate.ToString("yyyy-MM-dd")</td>
+                    <td>₪@order.TotalAmount</td>
+                    <td>@order.DeliveryStatus</td>
+                    <td>
+                        @if (order.OrderID.HasValue && order.DeliveryStatus == "Pending")
+                        {
+                            <button class="btn btn-primary" @onclick="() => EditOrder(order.OrderID.Value)">ערוך הזמנה</button>
+                        }
+
+                    </td>
+                </tr>
+            }
+            <tr>
+                <td colspan="2"><strong>Total</strong></td>
+                <td colspan="3"><strong>₪@orders.Sum(o => o.TotalAmount)</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="small-card" @onclick="NavigateToHome">
+        <div class="small-card-icon">
+            <i class="fas fa-home"></i> <!-- Font Awesome Icon for home -->
+        </div>
+        <div class="small-card-title">חזרה</div>
+    </div>
+}
+
+@code {
+    private List<CustomerOrder> orders;
+
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void EditOrder(int orderId)
+    {
+        // Set the OrderId in the UserIdService
+        UserIdService.OrderId = orderId;
+
+        // Navigate to the edit order page
+        NavigationManager.NavigateTo("/edit-order");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = UserIdService.UserId;
+
+        if (userId.HasValue)
+        {
+            orders = await Task.Run(() => OrderViewModel.GetOrdersForCustomer(userId.Value));
+        }
+        else
+        {
+            orders = new List<CustomerOrder>();
+        }
+    }
+}
