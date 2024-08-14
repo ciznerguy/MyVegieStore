@@ -1,0 +1,101 @@
+﻿@page "/"
+@layout EmptyLayout
+@inject NavigationManager Navigation
+
+<div class="home-container @backgroundClass">
+    <button @onclick="RedirectToLogin" class="home-button primary-button">
+        כניסה
+    </button>
+    <button class="home-button secondary-button">
+        הרשמה
+    </button>
+</div>
+
+@code {
+    private string backgroundClass = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100); // Small delay to ensure component is fully rendered
+            backgroundClass = "high-res-background";
+            StateHasChanged();
+        }
+    }
+
+    private void RedirectToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}
+
+<style>
+    /* Include the .home-container and button styles here */
+    /* Existing styles... */
+</style>
+
+
+<style>
+    .home-container {
+        background: url('Images/low-res-placeholder.jpg') no-repeat center center; /* Low-res placeholder */
+        background-size: cover;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        position: relative;
+    }
+
+
+
+    .home-container {
+        background: url('Images/low-res-placeholder.jpg') no-repeat center center;
+        background-size: cover;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        position: relative;
+        transition: background-image 0.5s ease-in-out;
+    }
+
+    .high-res-background {
+        background-image: url('Images/large-set-isolated-vegetables-white-background.jpg');
+    }
+
+    .home-button {
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        font-size: 20px;
+        margin: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: linear-gradient(145deg, #6fcf97, #34a853);
+        border-bottom: 4px solid #2c7a4b;
+    }
+
+        .home-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            border-bottom: 2px solid #2c7a4b;
+        }
+
+    .primary-button {
+        background: linear-gradient(145deg, #66bb6a, #43a047);
+    }
+
+    .secondary-button {
+        background: linear-gradient(145deg, #81c784, #4caf50);
+    }
+
+    .home-button:hover {
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+        transform: translateY(-2px);
+    }
+</style>

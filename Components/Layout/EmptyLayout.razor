@@ -1,0 +1,25 @@
+﻿@inherits LayoutComponentBase
+@using MyVegieStore.Services
+@inject UserIdService UserIdService
+@inject NavigationManager NavigationManager
+
+<div>
+    @if (UserIdService.IsLoggedIn)
+    {
+        <button @onclick="Logout" style="background-color: #ff0000; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+            Logout
+        </button>
+    }
+</div>
+
+@Body
+
+@code {
+    private void Logout()
+    {
+        UserIdService.Logout();
+
+        // Redirect to home page or login page after logout
+        NavigationManager.NavigateTo("/");
+    }
+}

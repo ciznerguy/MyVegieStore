@@ -1,0 +1,96 @@
+﻿@page "/add-product"
+@using Microsoft.AspNetCore.Components.Forms
+@using MyVegieStore.Model
+@using MyVegieStore.ViewModel
+@inject MyVegieStoreContext DbContext
+@inject NavigationManager NavigationManager
+
+<h3>Add New Product</h3>
+
+<EditForm Model="productViewModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label for="productName">Product Name:</label>
+        <InputText id="productName" @bind-Value="productViewModel.ProductName" />
+        <ValidationMessage For="@(() => productViewModel.ProductName)" />
+    </div>
+
+    <div>
+        <label for="pricePerUnit">Price Per Unit:</label>
+        <InputNumber id="pricePerUnit" @bind-Value="productViewModel.PricePerUnit" />
+        <ValidationMessage For="@(() => productViewModel.PricePerUnit)" />
+    </div>
+
+    <div>
+        <label for="stockQuantity">Stock Quantity:</label>
+        <InputNumber id="stockQuantity" @bind-Value="productViewModel.StockQuantity" />
+        <ValidationMessage For="@(() => productViewModel.StockQuantity)" />
+    </div>
+
+    <div>
+        <label for="pricingType">Pricing Type:</label>
+        <InputSelect id="pricingType" @bind-Value="productViewModel.PricingType">
+            <option value="ByWeight">By Weight</option>
+            <option value="PerUnit">Per Unit</option>
+        </InputSelect>
+        <ValidationMessage For="@(() => productViewModel.PricingType)" />
+    </div>
+
+    <div>
+        <label for="imageFile">Product Image:</label>
+        <InputFile id="imageFile" OnChange="HandleImageUpload" />
+        <ValidationMessage For="@(() => productViewModel.ImageFile)" />
+    </div>
+
+    <button type="submit">Add Product</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info">@message</div>
+}
+
+@code {
+    private ProductViewModel productViewModel = new ProductViewModel();
+    private string message;
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        var imageFile = e.File;
+        if (imageFile != null)
+        {
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.Name;
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.OpenReadStream().CopyToAsync(fileStream);
+            }
+
+            // Set the relative image path for the ViewModel
+            productViewModel.Image = $"/images/{uniqueFileName}";
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Convert the ViewModel to the Product entity
+            var newProduct = productViewModel.ToProduct(productViewModel.Image);
+            DbContext.Products.Add(newProduct);
+            await DbContext.SaveChangesAsync();
+
+            message = "Product added successfully!";
+            await Task.Delay(2000); // 2-second delay
+            NavigationManager.NavigateTo("/products");
+        }
+        catch (Exception ex)
+        {
+            message = $"An error occurred: {ex.Message}";
+        }
+    }
+}

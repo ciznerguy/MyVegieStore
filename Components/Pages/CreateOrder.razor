@@ -1,0 +1,115 @@
+﻿@page "/create-order"
+@layout EmptyLayout
+
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Model
+@inject MyVegieStoreContext _context // הזרקת ההקשר כאן
+@inject OrderViewModel OrderViewModel
+@inject NavigationManager NavigationManager
+
+<h3>הזמנת מוצרים</h3>
+
+<div style="display: flex;">
+    <div style="width: 50%; border: 2px solid #4CAF50; padding: 10px; margin-right: 10px;">
+        <!-- הוספת מסגרת ירוקה -->
+        <h4>מוצרים זמינים</h4>
+        <ul>
+            @foreach (var product in products)
+            {
+                <li>
+                    <strong>@product.ProductName</strong><br />
+                    מחיר ליחידה: @product.PricePerUnit ₪
+                    <div>
+                        <label>כמות: </label>
+                        <InputNumber @bind-Value="selectedQuantity" min="0.1" step="0.1" />
+                        <button class="custom-button" @onclick="() => AddProduct(product)">הוסף</button>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div style="width: 50%; border: 2px solid #4CAF50; padding: 10px;">
+        <!-- הוספת מסגרת ירוקה -->
+        <h4>פרטי ההזמנה שלך</h4>
+        <ul>
+            @foreach (var item in orderDetailsList)
+            {
+                <li>
+                    מוצר: @item.Product.ProductName<br />
+                    כמות: @item.Quantity<br />
+                    מחיר כולל: @item.TotalPrice ₪
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+<!-- סך הכל מוצג בצורה קבועה בצד ימין למעלה עם רקע ירוק -->
+<div style="position: fixed; right: 20px; top: 20px; background-color: #4CAF50; color: white; padding: 10px; border-radius: 4px;">
+    <h4>סך הכל: @TotalOrderAmount.ToString("F2") ₪</h4>
+</div>
+
+<style>
+    .custom-button {
+        background-color: #4CAF50; /* ירוק */
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+        .custom-button:hover {
+            background-color: #45a049; /* ירוק כהה יותר בעת ריחוף */
+        }
+</style>
+
+@code {
+    private List<Product> products;
+    private double selectedQuantity = 1.0; // כמות ברירת מחדל
+    private List<OrderDetails> orderDetailsList = new List<OrderDetails>();
+    private double TotalOrderAmount = 0.0; // סך הכל של ההזמנה
+
+    protected override void OnInitialized()
+    {
+        // טעינת מוצרים זמינים וטיפול בערכי NULL פוטנציאליים
+        products = _context.Products
+            .Select(p => new Product
+                {
+                    ProductID = p.ProductID,
+                    ProductName = p.ProductName ?? "Unknown Product", // טיפול ב-NULL עבור ProductName
+                    PricePerUnit = p.PricePerUnit,                   // בהנחה ש-PricePerUnit אינו יכול להיות NULL
+                    StockQuantity = p.StockQuantity,                 // בהנחה ש-StockQuantity אינו יכול להיות NULL
+                    PricingType = p.PricingType ?? "Default Type",   // טיפול ב-NULL עבור PricingType
+                    Image = p.Image // שימוש בנתיב התמונה או ברירת מחדל כפי שמוגדר במחלקת Product
+                })
+            .ToList();
+    }
+
+    private void AddProduct(Product product)
+    {
+        var orderDetail = new OrderDetails
+            {
+                ProductID = product.ProductID,
+                Product = product, // קישור המוצר לפרטי ההזמנה
+                Quantity = selectedQuantity,
+                UnitPrice = product.PricePerUnit,
+                TotalPrice = selectedQuantity * product.PricePerUnit,
+                OrderDate = DateTime.Now
+            };
+
+        orderDetailsList.Insert(0, orderDetail); // הוספה לראש הרשימה
+
+        // עדכון סך הכל
+        TotalOrderAmount += orderDetail.TotalPrice;
+
+        // איפוס הכמות
+        selectedQuantity = 1.0;
+    }
+}
