@@ -1,0 +1,176 @@
+﻿@page "/view-order"
+@layout EmptyLayout
+@using Microsoft.EntityFrameworkCore
+@using MyVegieStore.Model
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Services
+@inject MyVegieStoreContext _context
+@inject NavigationManager NavigationManager
+@inject UserIdService UserIdService
+
+<div class="view-order-header">
+    <button class="back-button" @onclick="NavigateToCustomerPage">חזור למסך ראשי</button>
+    <h3>הזמנה מספר @UserIdService.OrderId - @UserIdService.FullName</h3>
+    <h4>סה"כ הזמנה: @totalOrderAmount ₪</h4>
+    @if (orderStatus == "Pending")
+    {
+        <button class="edit-order-button" @onclick="NavigateToEditOrder">ערוך הזמנה</button>
+    }
+</div>
+
+@if (orderId.HasValue && orderId > 0)
+{
+    <div class="view-order-body">
+        <h4>פרטי ההזמנה</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>שם מוצר</th>
+                    <th>כמות</th>
+                    <th>מחיר ליחידה</th>
+                    <th>מחיר כולל</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (orderDetailsList.Any())
+                {
+                    @foreach (var item in orderDetailsList)
+                    {
+                        <tr>
+                            <td>@item.Product.ProductName</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice ₪</td>
+                            <td>@item.TotalPrice ₪</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4">אין פריטים להזמנה זו.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="error-message">
+        <h4>Order ID is missing or invalid.</h4>
+        <p>Please make sure you are logged in and have selected a valid order.</p>
+    </div>
+}
+
+<style>
+.view-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.view-order-body {
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.edit-order-button {
+    background-color: #FF5733;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.edit-order-button:hover {
+    background-color: #FF4500;
+}
+
+.back-button {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 20px;
+}
+
+.back-button:hover {
+    background-color: #0056b3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+.error-message {
+    padding: 20px;
+    background-color: #f44336;
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+}
+</style>
+
+@code {
+    private List<OrderDetails> orderDetailsList = new List<OrderDetails>();
+    private string orderStatus;
+    private int? orderId;
+    private double totalOrderAmount;
+
+    protected override void OnInitialized()
+    {
+        orderId = UserIdService.OrderId;
+
+        if (orderId.HasValue && orderId > 0)
+        {
+            orderDetailsList = _context.OrderDetails
+                .Where(od => od.OrderID == orderId.Value)
+                .Include(od => od.Product)
+                .ToList();
+
+            totalOrderAmount = orderDetailsList.Sum(od => od.TotalPrice);
+
+            var order = _context.Orders.FirstOrDefault(o => o.OrderID == orderId.Value);
+            if (order != null)
+            {
+                orderStatus = order.DeliveryStatus; // Assuming DeliveryStatus holds the order status
+            }
+        }
+        // If OrderId is not valid, the page will display an error message instead.
+    }
+
+    private void NavigateToEditOrder()
+    {
+        NavigationManager.NavigateTo("/edit-order");
+    }
+
+    private void NavigateToCustomerPage()
+    {
+        NavigationManager.NavigateTo("/customer-page");
+    }
+}

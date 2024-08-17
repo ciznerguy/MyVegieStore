@@ -44,7 +44,7 @@ else
                         {
                             <button class="btn btn-primary" @onclick="() => EditOrder(order.OrderID.Value)">ערוך הזמנה</button>
                         }
-
+                        <button class="btn btn-secondary" @onclick="() => ViewOrderDetails(order.OrderID.Value)">פרטי הזמנה</button>
                     </td>
                 </tr>
             }
@@ -78,6 +78,15 @@ else
 
         // Navigate to the edit order page
         NavigationManager.NavigateTo("/edit-order");
+    }
+
+    private void ViewOrderDetails(int orderId)
+    {
+        // Set the OrderId in the UserIdService
+        UserIdService.OrderId = orderId;
+
+        // Navigate to the view order page
+        NavigationManager.NavigateTo("/view-order");
     }
 
     protected override async Task OnInitializedAsync()
