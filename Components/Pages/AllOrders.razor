@@ -1,0 +1,145 @@
+﻿@page "/all-orders"
+@layout EmptyLayout
+
+@using MyVegieStore.ViewModel
+@using MyVegieStore.Model
+@using MyVegieStore.Services
+@inject OrderViewModel OrderViewModel
+@inject NavigationManager NavigationManager
+@inject UserIdService UserIdService
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container mt-4">
+    <h3 class="mb-4 text-center">כל ההזמנות במערכת</h3>
+
+    <div class="form-group text-center">
+        <label for="statusSelect">בחר סטטוס הזמנה:</label>
+        <select id="statusSelect" class="form-control w-25 d-inline" @onchange="OnStatusChanged">
+            <option value="Pending" selected="@((selectedStatus == OrderStatus.Pending))">Pending</option>
+            <option value="Delivered" selected="@((selectedStatus == OrderStatus.Delivered))">Delivered</option>
+            <option value="Cancelled" selected="@((selectedStatus == OrderStatus.Cancelled))">Cancelled</option>
+        </select>
+    </div>
+
+    @if (orders == null)
+    {
+        <div class="text-center">
+            <p><em>Loading...</em></p>
+        </div>
+    }
+    else if (orders.Count == 0)
+    {
+        <div class="alert alert-warning text-center">
+            <p>אין הזמנות במערכת במצב @selectedStatus.</p>
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>מספר הזמנה</th>
+                    <th>תאריך הזמנה</th>
+                    <th>סכום כולל</th>
+                    <th>סטטוס משלוח</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>@order.OrderID</td>
+                        <td>@order.OrderDate.ToString("yyyy-MM-dd")</td>
+                        <td>₪@order.TotalAmount</td>
+                        <td>
+                            <select class="form-control" @onchange="@(e => ShowConfirmation(order.OrderID.Value, (OrderStatus)Enum.Parse(typeof(OrderStatus), e.Value.ToString())))">
+                                <option value="Pending" selected="@((order.DeliveryStatus == OrderStatus.Pending))">Pending</option>
+                                <option value="Delivered" selected="@((order.DeliveryStatus == OrderStatus.Delivered))">Delivered</option>
+                                <option value="Cancelled" selected="@((order.DeliveryStatus == OrderStatus.Cancelled))">Cancelled</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn btn-info btn-sm" @onclick="() => ViewOrderDetails(order.OrderID.Value)">פרטי הזמנה</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (showConfirmation)
+    {
+        <div class="modal" tabindex="-1" style="display:block;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">אישור שינוי סטטוס</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>האם אתה בטוח שברצונך לשנות את סטטוס ההזמנה?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" @onclick="ConfirmStatusChange">אישור</button>
+                        <button class="btn btn-danger" @onclick="CancelStatusChange">ביטול</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CustomerOrder> orders;
+    private OrderStatus selectedStatus = OrderStatus.Pending; // ערך ברירת המחדל
+    private bool showConfirmation = false;
+    private int selectedOrderId;
+    private OrderStatus selectedOrderStatus;
+
+    private void ViewOrderDetails(int orderId)
+    {
+        // Set the OrderId in the UserIdService
+        UserIdService.OrderId = orderId;
+
+        // Navigate to the view order page
+        NavigationManager.NavigateTo("/view-order");
+    }
+
+    private async Task LoadOrders()
+    {
+        orders = await Task.Run(() => OrderViewModel.GetOrdersByStatus(selectedStatus));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatus = Enum.Parse<OrderStatus>(e.Value.ToString());
+        await LoadOrders();
+        StateHasChanged();
+    }
+
+    private void ShowConfirmation(int orderId, OrderStatus status)
+    {
+        selectedOrderId = orderId;
+        selectedOrderStatus = status;
+        showConfirmation = true;
+    }
+
+    private async Task ConfirmStatusChange()
+    {
+        await OrderViewModel.UpdateOrderStatus(selectedOrderId, selectedOrderStatus);
+        showConfirmation = false;
+        await LoadOrders();
+    }
+
+    private void CancelStatusChange()
+    {
+        showConfirmation = false;
+        StateHasChanged(); // רענן את הדף כדי להחזיר את הסטטוס הקודם
+    }
+
+}

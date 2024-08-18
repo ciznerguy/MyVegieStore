@@ -1,9 +1,8 @@
-using MyVegieStore.Components;
+﻿using MyVegieStore.Components;
 using Microsoft.EntityFrameworkCore;
 using MyVegieStore.ViewModel;
-
 using MyVegieStore.Services;
-
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace MyVegieStore
 {
@@ -12,20 +11,24 @@ namespace MyVegieStore
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // Register services
             builder.Services.AddScoped<UserIdService>();
-            // Add services to the container.
-            builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
 
             // Register MyVegieStoreContext with SQLite
             builder.Services.AddDbContext<MyVegieStoreContext>(options =>
                 options.UseSqlite(builder.Configuration.GetConnectionString("MyVegieStoreContext")));
 
-            // Register LoginViewModel as a scoped service
+            // Register ViewModel services
             builder.Services.AddScoped<LoginViewModel>();
+            builder.Services.AddScoped<OrderViewModel>();
 
-            builder.Services.AddScoped<OrderViewModel>();  // Add this line
+            // Register Custom Authentication State Provider
+            builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 
+            // Add services to the container.
+            builder.Services.AddRazorComponents()
+                .AddInteractiveServerComponents();
 
             var app = builder.Build();
 

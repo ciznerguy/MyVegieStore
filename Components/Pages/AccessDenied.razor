@@ -1,0 +1,20 @@
+﻿@page "/access-denied"
+@layout EmptyLayout
+@inject NavigationManager Navigation
+
+<h3>אין לך הרשאה לדף זה</h3>
+<p>אתה מועבר לדף הבית בעוד 3 שניות...</p>
+
+@code {
+    private bool _isRedirecting;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isRedirecting)
+        {
+            _isRedirecting = true; // מונע הפניה כפולה
+            await Task.Delay(3000); // המתנה של 3 שניות
+            Navigation.NavigateTo("/");
+        }
+    }
+}

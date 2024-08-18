@@ -2,10 +2,16 @@
 @layout EmptyLayout
 @using MyVegieStore.ViewModel
 @using MyVegieStore.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject MyVegieStoreContext DbContext
 @inject NavigationManager NavigationManager
 @inject UserIdService UserIdService
+@inject AuthenticationStateProvider AuthStateProvider
+
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
 
 <div class="login-container">
     <div class="login-form">
@@ -53,6 +59,23 @@
                 UserIdService.UserId = user.PersonID;
                 UserIdService.FullName = user.Name;
                 UserIdService.UserType = user.UserType;
+
+                // יצירת רשימת Claims
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.Email),
+                    new Claim(ClaimTypes.Role, user.UserType) // הוספת התפקיד של המשתמש ל-Claims
+                };
+
+                // יצירת ClaimsIdentity
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                // יצירת ClaimsPrincipal
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                // המרת ה-AuthStateProvider ל-CustomAuthenticationStateProvider
+                var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+                customAuthStateProvider.MarkUserAsAuthenticated(claimsPrincipal);
 
                 loginMessage = "Login successful!";
                 await Task.Delay(1000);
@@ -112,43 +135,43 @@
         transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition */
     }
 
-        .login-form h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #333333;
-        }
+    .login-form h2 {
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: #333333;
+    }
 
-        .login-form label {
-            display: block;
-            text-align: left;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555555;
-        }
+    .login-form label {
+        display: block;
+        text-align: left;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555555;
+    }
 
-        .login-form input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #dddddd;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
+    .login-form input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #dddddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
 
-        .login-form button {
-            width: 100%;
-            padding: 10px;
-            background-color: #00796b;
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+    .login-form button {
+        width: 100%;
+        padding: 10px;
+        background-color: #00796b;
+        color: #ffffff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
 
-            .login-form button:hover {
-                background-color: #004d40;
-            }
+    .login-form button:hover {
+        background-color: #004d40;
+    }
 
     .alert.alert-info {
         margin-top: 20px;

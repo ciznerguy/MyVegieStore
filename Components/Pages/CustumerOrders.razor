@@ -11,6 +11,15 @@
 
 <h3>ההזמנות של @UserIdService.FullName </h3>
 
+<div class="form-group text-center">
+    <label for="statusSelect">בחר סטטוס הזמנה:</label>
+    <select id="statusSelect" class="form-control w-25 d-inline" @onchange="OnStatusChanged">
+        <option value="Pending">Pending</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Cancelled">Cancelled</option>
+    </select>
+</div>
+
 @if (orders == null)
 {
     <p><em>Loading...</em></p>
@@ -40,10 +49,11 @@ else
                     <td>₪@order.TotalAmount</td>
                     <td>@order.DeliveryStatus</td>
                     <td>
-                        @if (order.OrderID.HasValue && order.DeliveryStatus == "Pending")
+                        @if (order.OrderID.HasValue && order.DeliveryStatus == OrderStatus.Pending)
                         {
                             <button class="btn btn-primary" @onclick="() => EditOrder(order.OrderID.Value)">ערוך הזמנה</button>
                         }
+
                         <button class="btn btn-secondary" @onclick="() => ViewOrderDetails(order.OrderID.Value)">פרטי הזמנה</button>
                     </td>
                 </tr>
@@ -65,6 +75,7 @@ else
 
 @code {
     private List<CustomerOrder> orders;
+    private OrderStatus selectedStatus = OrderStatus.Pending; // ערך ברירת מחדל
 
     private void NavigateToHome()
     {
@@ -89,17 +100,30 @@ else
         NavigationManager.NavigateTo("/view-order");
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatus = Enum.Parse<OrderStatus>(e.Value.ToString());
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
     {
         var userId = UserIdService.UserId;
 
         if (userId.HasValue)
         {
-            orders = await Task.Run(() => OrderViewModel.GetOrdersForCustomer(userId.Value));
+            orders = await Task.Run(() => OrderViewModel.GetOrdersForCustomerByStatus(userId.Value, selectedStatus));
         }
         else
         {
             orders = new List<CustomerOrder>();
         }
+
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
     }
 }

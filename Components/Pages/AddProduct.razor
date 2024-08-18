@@ -1,56 +1,86 @@
 ﻿@page "/add-product"
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
 @using MyVegieStore.Model
 @using MyVegieStore.ViewModel
 @inject MyVegieStoreContext DbContext
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider CustomAuthStateProvider
+@using System.Security.Claims
 
-<h3>Add New Product</h3>
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="Admin">
+        <Authorized Context="authContent">
+            <h3>Add New Product</h3>
+            <EditForm Model="productViewModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-<EditForm Model="productViewModel" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+                <div>
+                    <label for="productName">Product Name:</label>
+                    <InputText id="productName" @bind-Value="productViewModel.ProductName" />
+                    <ValidationMessage For="@(() => productViewModel.ProductName)" />
+                </div>
 
-    <div>
-        <label for="productName">Product Name:</label>
-        <InputText id="productName" @bind-Value="productViewModel.ProductName" />
-        <ValidationMessage For="@(() => productViewModel.ProductName)" />
-    </div>
+                <div>
+                    <label for="pricePerUnit">Price Per Unit:</label>
+                    <InputNumber id="pricePerUnit" @bind-Value="productViewModel.PricePerUnit" />
+                    <ValidationMessage For="@(() => productViewModel.PricePerUnit)" />
+                </div>
 
-    <div>
-        <label for="pricePerUnit">Price Per Unit:</label>
-        <InputNumber id="pricePerUnit" @bind-Value="productViewModel.PricePerUnit" />
-        <ValidationMessage For="@(() => productViewModel.PricePerUnit)" />
-    </div>
+                <div>
+                    <label for="stockQuantity">Stock Quantity:</label>
+                    <InputNumber id="stockQuantity" @bind-Value="productViewModel.StockQuantity" />
+                    <ValidationMessage For="@(() => productViewModel.StockQuantity)" />
+                </div>
 
-    <div>
-        <label for="stockQuantity">Stock Quantity:</label>
-        <InputNumber id="stockQuantity" @bind-Value="productViewModel.StockQuantity" />
-        <ValidationMessage For="@(() => productViewModel.StockQuantity)" />
-    </div>
+                <div>
+                    <label for="pricingType">Pricing Type:</label>
+                    <InputSelect id="pricingType" @bind-Value="productViewModel.PricingType">
+                        <option value="ByWeight">By Weight</option>
+                        <option value="PerUnit">Per Unit</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => productViewModel.PricingType)" />
+                </div>
 
-    <div>
-        <label for="pricingType">Pricing Type:</label>
-        <InputSelect id="pricingType" @bind-Value="productViewModel.PricingType">
-            <option value="ByWeight">By Weight</option>
-            <option value="PerUnit">Per Unit</option>
-        </InputSelect>
-        <ValidationMessage For="@(() => productViewModel.PricingType)" />
-    </div>
+                <div>
+                    <label for="imageFile">Product Image:</label>
+                    <InputFile id="imageFile" OnChange="HandleImageUpload" />
+                    <ValidationMessage For="@(() => productViewModel.ImageFile)" />
+                </div>
 
-    <div>
-        <label for="imageFile">Product Image:</label>
-        <InputFile id="imageFile" OnChange="HandleImageUpload" />
-        <ValidationMessage For="@(() => productViewModel.ImageFile)" />
-    </div>
+                <button type="submit">Add Product</button>
+            </EditForm>
 
-    <button type="submit">Add Product</button>
-</EditForm>
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info">@message</div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <div>
+                <h3>אין לך הרשאה לדף זה</h3>
+                <p>אתה מועבר לדף הבית בעוד 3 שניות...</p>
+            </div>
 
-@if (!string.IsNullOrEmpty(message))
-{
-    <div class="alert alert-info">@message</div>
-}
+            @code {
+                private bool _isRedirecting;
+
+                protected override async Task OnAfterRenderAsync(bool firstRender)
+                {
+                    if (firstRender && !_isRedirecting)
+                    {
+                        _isRedirecting = true;
+                        await Task.Delay(3000);
+                        NavigationManager.NavigateTo("/");
+                    }
+                }
+            }
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
 
 @code {
     private ProductViewModel productViewModel = new ProductViewModel();
@@ -70,7 +100,6 @@
                 await imageFile.OpenReadStream().CopyToAsync(fileStream);
             }
 
-            // Set the relative image path for the ViewModel
             productViewModel.Image = $"/images/{uniqueFileName}";
         }
     }
@@ -79,13 +108,12 @@
     {
         try
         {
-            // Convert the ViewModel to the Product entity
             var newProduct = productViewModel.ToProduct(productViewModel.Image);
             DbContext.Products.Add(newProduct);
             await DbContext.SaveChangesAsync();
 
             message = "Product added successfully!";
-            await Task.Delay(2000); // 2-second delay
+            await Task.Delay(2000);
             NavigationManager.NavigateTo("/products");
         }
         catch (Exception ex)
