@@ -40,10 +40,11 @@ else
                     <td>₪@order.TotalAmount</td>
                     <td>@order.DeliveryStatus</td>
                     <td>
-                        @if (order.OrderID.HasValue && order.DeliveryStatus == "Pending")
-                        {
-                            <button class="btn btn-primary" @onclick="() => EditOrder(order.OrderID.Value)">ערוך הזמנה</button>
-                        }
+                       @if (order.OrderID.HasValue && order.DeliveryStatus == OrderStatus.Pending)
+                            {
+                                <button class="btn btn-primary" @onclick="() => EditOrder(order.OrderID.Value)">ערוך הזמנה</button>
+                            }
+
                         <button class="btn btn-secondary" @onclick="() => ViewOrderDetails(order.OrderID.Value)">פרטי הזמנה</button>
                     </td>
                 </tr>

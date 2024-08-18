@@ -16,8 +16,27 @@ namespace MyVegieStore.ViewModel
         public List<CustomerOrder> GetOrdersForCustomer(int customerId)
         {
             return _context.Orders
-                          .Where(o => o.CustomerID == customerId)  // Correctly using CustomerID
+                          .Where(o => o.CustomerID == customerId)
                            .ToList();
         }
+
+        public List<CustomerOrder> GetOrdersByStatus(OrderStatus status)
+        {
+            return _context.Orders
+                           .Where(o => o.DeliveryStatus == status)
+                           .ToList();
+        }
+
+        // פונקציה לעדכון סטטוס הזמנה
+        public async Task UpdateOrderStatus(int orderId, OrderStatus newStatus)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order != null)
+            {
+                order.DeliveryStatus = newStatus;
+                await _context.SaveChangesAsync();
+            }
+        }
+
     }
 }

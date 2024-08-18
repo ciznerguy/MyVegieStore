@@ -223,52 +223,51 @@
         showConfirmation = true;
     }
 
-    private void ConfirmOrder()
+  private void ConfirmOrder()
+{
+    // יצירת אובייקט חדש של CustomerOrder
+    var newOrder = new CustomerOrder
     {
-        // יצירת אובייקט חדש של CustomerOrder
-        var newOrder = new CustomerOrder
-            {
-                CustomerID = UserIdService.UserId ?? 0, // שימוש ב-Null Coalescing Operator כדי למנוע המרה שגויה
-                OrderDate = DateTime.Now,
-                TotalAmount = Math.Round(TotalOrderAmount, 2),
-                DeliveryStatus = "Pending", // סטטוס התחלה, ניתן לשנות בהתאם לצורך
-            };
+        CustomerID = UserIdService.UserId ?? 0, // שימוש ב-Null Coalescing Operator כדי למנוע המרה שגויה
+        OrderDate = DateTime.Now,
+        TotalAmount = Math.Round(TotalOrderAmount, 2),
+        DeliveryStatus = OrderStatus.Pending // הגדרת סטטוס ההזמנה כברירת מחדל ל-Pending
+    };
 
-        // הוספת ההזמנה לבסיס הנתונים
-        _context.Orders.Add(newOrder);
+    // הוספת ההזמנה לבסיס הנתונים
+    _context.Orders.Add(newOrder);
 
-        // שמירת השינויים בבסיס הנתונים כדי לקבל את OrderID של ההזמנה החדשה
-        _context.SaveChanges();
+    // שמירת השינויים בבסיס הנתונים כדי לקבל את OrderID של ההזמנה החדשה
+    _context.SaveChanges();
 
-        // הוספת כל שורת פירוט ההזמנה לטבלת OrderDetails
-        foreach (var item in orderDetailsList)
+    // הוספת כל שורת פירוט ההזמנה לטבלת OrderDetails
+    foreach (var item in orderDetailsList)
+    {
+        var orderDetail = new OrderDetails
         {
-            var orderDetail = new OrderDetails
-                {
-                    OrderID = newOrder.OrderID ?? 0, // השתמש במפעיל ?? כדי להבטיח שלא יישמר null
-                    ProductID = item.ProductID,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    TotalPrice = item.TotalPrice,
-                };
+            OrderID = newOrder.OrderID ?? 0, // השתמש במפעיל ?? כדי להבטיח שלא יישמר null
+            ProductID = item.ProductID,
+            Quantity = item.Quantity,
+            UnitPrice = item.UnitPrice,
+            TotalPrice = item.TotalPrice,
+        };
 
-            _context.OrderDetails.Add(orderDetail);
-        }
-
-
-        // שמירת כל שורות פירוט ההזמנה בבסיס הנתונים
-        _context.SaveChanges();
-
-        // איפוס פרטי ההזמנה לאחר שמירה
-        orderDetailsList.Clear();
-        TotalOrderAmount = 0.0;
-
-        // הסתרת דיאלוג האישור
-        showConfirmation = false;
-
-        // נווט לדף ההזמנות או כל דף מתאים אחר
-        NavigationManager.NavigateTo("/customer-orders");
+        _context.OrderDetails.Add(orderDetail);
     }
+
+    // שמירת כל שורות פירוט ההזמנה בבסיס הנתונים
+    _context.SaveChanges();
+
+    // איפוס פרטי ההזמנה לאחר שמירה
+    orderDetailsList.Clear();
+    TotalOrderAmount = 0.0;
+
+    // הסתרת דיאלוג האישור
+    showConfirmation = false;
+
+    // נווט לדף ההזמנות או כל דף מתאים אחר
+    NavigationManager.NavigateTo("/customer-orders");
+}
 
 
     private void CancelOrder()

@@ -1,4 +1,4 @@
-﻿@page "/view-order"
+﻿@page "/view-order-admin"
 @layout EmptyLayout
 @using Microsoft.EntityFrameworkCore
 @using MyVegieStore.Model
@@ -9,13 +9,9 @@
 @inject UserIdService UserIdService
 
 <div class="view-order-header">
-    <button class="back-button" @onclick="NavigateToCustomerPage">חזור למסך ראשי</button>
+    <button class="back-button" @onclick="NavigateToAllOrders">חזור לכל ההזמנות</button>
     <h3>הזמנה מספר @UserIdService.OrderId - @UserIdService.FullName</h3>
     <h4>סה"כ הזמנה: @totalOrderAmount ₪</h4>
-    @if (orderStatus == "Pending")
-    {
-        <button class="edit-order-button" @onclick="NavigateToEditOrder">ערוך הזמנה</button>
-    }
 </div>
 
 @if (orderId.HasValue && orderId > 0)
@@ -52,6 +48,16 @@
                 }
             </tbody>
         </table>
+
+        <div class="order-status">
+            <h4>שנה סטטוס הזמנה</h4>
+            <select @bind="orderStatus">
+                <option value="@OrderStatus.Pending">Pending</option>
+                <option value="@OrderStatus.Delivered">Delivered</option>
+                <option value="@OrderStatus.Cancelled">Cancelled</option>
+            </select>
+            <button class="save-button" @onclick="SaveOrderStatus">שמור סטטוס</button>
+        </div>
     </div>
 }
 else
@@ -79,19 +85,6 @@ else
     background-color: #f9f9f9;
     border: 1px solid #ccc;
     border-radius: 4px;
-}
-
-.edit-order-button {
-    background-color: #FF5733;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.edit-order-button:hover {
-    background-color: #FF4500;
 }
 
 .back-button {
@@ -127,6 +120,24 @@ th {
     background-color: #f2f2f2;
 }
 
+.order-status {
+    margin-top: 20px;
+}
+
+.save-button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.save-button:hover {
+    background-color: #218838;
+}
+
 .error-message {
     padding: 20px;
     background-color: #f44336;
@@ -138,7 +149,7 @@ th {
 
 @code {
     private List<OrderDetails> orderDetailsList = new List<OrderDetails>();
-    private string orderStatus;
+    private OrderStatus orderStatus;
     private int? orderId;
     private double totalOrderAmount;
 
@@ -158,20 +169,23 @@ th {
             var order = _context.Orders.FirstOrDefault(o => o.OrderID == orderId.Value);
             if (order != null)
             {
-                orderStatus = order.DeliveryStatus.ToString(); // Convert enum to string
-
+                orderStatus = order.DeliveryStatus;
             }
         }
-        // If OrderId is not valid, the page will display an error message instead.
     }
 
-    private void NavigateToEditOrder()
+    private void SaveOrderStatus()
     {
-        NavigationManager.NavigateTo("/edit-order");
+        var order = _context.Orders.FirstOrDefault(o => o.OrderID == orderId.Value);
+        if (order != null)
+        {
+            order.DeliveryStatus = orderStatus;
+            _context.SaveChanges();
+        }
     }
 
-    private void NavigateToCustomerPage()
+    private void NavigateToAllOrders()
     {
-        NavigationManager.NavigateTo("/customer-page");
+        NavigationManager.NavigateTo("/all-orders");
     }
 }
